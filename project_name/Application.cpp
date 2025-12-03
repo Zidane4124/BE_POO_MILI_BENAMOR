@@ -5,28 +5,26 @@
  *********************************************************************/
 #include "Application.h"
 
-
 Application::Application()
 {
-  // Code
-  ; 
+  // Code ------------------
+  ;
 }
-  
+
 Application::~Application()
 {
   // Code
   ;
-}  
+}
 
 void Application::init(void)
 {
   // Code
-    ;
+  ;
 }
-
 
 void Application::run(void)
 {
   // Code
-    ;
+  ;
 }
