@@ -1,7 +1,7 @@
-#include <ESP8266WiFi.h> 
+/*#include <ESP8266WiFi.h> 
 
-const char* ssid     = "iPhone de Louayi";
-const char* password = "Louayi38";
+const char* ssid     = "iPhone de Melik";
+const char* password = "4124gang";
 
 void setup() {
   Serial.begin(9600);
@@ -27,4 +27,4 @@ void setup() {
 
 void loop() {
 
-}
+}*/

@@ -1,4 +1,4 @@
-class Tache {
+/*class Tache {
   public:
     Tache* suivante = nullptr; // Pointeur vers la tâche suivante (Liste Chaînée)
     
@@ -108,4 +108,4 @@ void setup() {
 void loop() {
   // lancement de la liste chainée
   monRobot.lancer();
-}
+}*/
