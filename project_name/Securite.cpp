@@ -5,6 +5,8 @@
 #include <Arduino.h>
 #include "Ultrasonic.h"
 
+using namespace std;
+
 class Securite {
   //classe mere
   public:
@@ -15,12 +17,16 @@ class capteur_mouvement : public Securite{
     int distance;
     int Pin;
     Ultrasonic *ultrasonic;
+    int distance_mouvement;
+    int historique[32];
   public:
     capteur_mouvement(int p){
       Pin=p;
       ultrasonic = new Ultrasonic(Pin); //allocation dans le tas (malloc + appel de constructeur)
+      distance_mouvement = 9999;
+
     }
-    int detection_mouvement(){
+    int mesure_distance(){
       //distance=mesurer distance
       /*pinMode(Pin, OUTPUT);
       digitalWrite(Pin, HIGH);
@@ -30,6 +36,29 @@ class capteur_mouvement : public Securite{
       distance = ultrasonic->MeasureInCentimeters();
       return distance;
     }
+    int scan (){
+      distance_mouvement = ultrasonic->MeasureInCentimeters();
+      cout << "distance mouvement :" << distance_mouvement << endl;
+      return distance_mouvement;
+    }
+    bool detec_mouvement(){
+      // true si un mouvement est détecté
+      // false si pas de mouvement
+      int distance_secur = ultrasonic->MeasureInCentimeters();
+
+      cout << "distance securite :" << distance_secur << "distance_secur+0.1*distance_secur :" << distance_secur+0.1*distance_secur << "distance_mouvement :" << distance_mouvement << endl;
+
+      if (((distance_secur+0.1*distance_secur) < distance_mouvement)){
+        
+        cout << "mouvement detecté"<< endl;
+        return true;
+      }
+      else{
+        return false;
+      }
+    }
+    
+
 };
   class Porte : public Securite {
     private:
@@ -45,7 +74,7 @@ class capteur_mouvement : public Securite{
         delete detecteur; 
       }
       bool estOuverte() {
-          int d = detecteur->detection_mouvement();
+          int d = detecteur->mesure_distance();
           
           if (d>1){
             etat = true;

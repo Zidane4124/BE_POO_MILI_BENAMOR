@@ -18,7 +18,7 @@ protected:
 
 public:
     CapteurMouvement(int trigger, int echo);
-    int detection_mouvement();
+    int mesure_distance();
 };
 
 #endif
