@@ -29,21 +29,31 @@ class capteur_mouvement : public Securite{
       pinMode(Pin, INPUT);
       distance = ultrasonic->MeasureInCentimeters();
       return distance;
-  }
+    }
+};
   class Porte : public Securite {
     private:
         capteur_mouvement *detecteur; // la porte a un capteur
+        bool etat; // true = ouverte; false = fermée
 
     public:
       Porte(int pinCapteur) {
           detecteur = new capteur_mouvement(pinCapteur);
+          
       }
       ~Porte() { 
         delete detecteur; 
       }
       bool estOuverte() {
           int d = detecteur->detection_mouvement();
-          bool etat = (d > 1); // Si le capteur mesure plus d'un cm, la porte est ouiverte
+          
+          if (d>1){
+            etat = true;
+          }
+          else{
+            etat = false;
+          }
+          //bool etat = (d > 1); // Si le capteur mesure plus d'un cm, la porte est ouiverte
           return etat;
       }
 };
@@ -54,11 +64,11 @@ class Buzzer : public Securite {
     Buzzer(int p){
       PinBuzzer=p;
     }
-    void allumer{
+    void allumer(){
       digitalWrite(PinBuzzer, HIGH);
     }
-    void eteindre{
+    void eteindre(){
       digitalWrite(PinBuzzer, LOW);
     }
-}
+};
 

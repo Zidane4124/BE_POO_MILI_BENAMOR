@@ -30,15 +30,23 @@ void loop(){
         alarme=true;
         cout << "intrusion"<< endl;
     }
+    // pour test
+    else{
+        alarme=false;
+        cout << "pas d'intrusion"<< endl;
+    }
+
 
     if ((alarme==true) && (etat < 20) && ((millis()-last_time) > 500)){
         if ((etat%2)==0){
             //allumer
-            Buzz.allumer();
+            //Buzz.allumer();
+            cout << "allumer !" << endl;
         }
         else{
             //eteindre
-            Buzz.eteindre();
+            //Buzz.eteindre();
+            cout << "eteindre !" << endl;
         }
         etat++;
         last_time = millis();
