@@ -80,6 +80,7 @@ class capteur_mouvement : public Securite{
           
           if (d>1){
             etat = true;
+            cout << "Porte ouverte !" << endl;
           }
           else{
             etat = false;
@@ -103,4 +104,29 @@ class Buzzer : public Securite {
       digitalWrite(PinBuzzer, LOW);
     }
 };
+class blink_led : public Securite {
+  private:
+  int PinBlink_led;
+
+  public:
+    blink_led(int pin){  //constructeur pour faire passer les variables D8 et D4
+      PinBlink_led=pin;
+      pinMode(pin, OUTPUT);
+    }
+    
+   
+
+  void eteindre(){
+  digitalWrite(PinBlink_led, LOW);
+  }
+
+  void allumer(){
+  digitalWrite(PinBlink_led, HIGH);
+  }
+
+};
+
+
+// ------------- Partie notification -------------
+
 

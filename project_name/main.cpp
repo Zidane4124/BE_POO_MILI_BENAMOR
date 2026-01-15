@@ -6,8 +6,10 @@
 using namespace std;
 capteur_mouvement capteurMouv(D3); // porte
 capteur_mouvement capteurMouv2(D6); // mouvement
-Buzzer Buzz (D8);
+Buzzer Buzz (D7);
 Porte porte(D3);
+blink_led blink_1(D8);
+blink_led blink_2(D4);
 
 
 int etat = 0;
@@ -50,6 +52,8 @@ void loop(){
         else{
             alarme=false;
             cout << "pas d'intrusion"<< endl;
+            blink_1.eteindre();
+            blink_2.eteindre();
             last_time2 = millis();
             etat = 0;
         }
@@ -66,11 +70,15 @@ void loop(){
         if ((etat%2)==0){
             //allumer
             Buzz.allumer();
+            blink_1.allumer();
+            blink_2.eteindre();
             cout << "allumer !" << endl;
         }
         else{
             //eteindre
             Buzz.eteindre();
+            blink_1.eteindre();
+            blink_2.allumer();
             cout << "eteindre !" << endl;
         }
         etat++;
