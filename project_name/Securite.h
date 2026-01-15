@@ -63,18 +63,46 @@ class capteur_mouvement : public Securite{
         return false;
       }
     }
-    
+};
+class Loquet : public Securite {
+  private:
+    int pin;
+    Servo monServo;
+    bool verrouille;
 
+  public:
+    Loquet(int p) : pin(p), verrouille(true) {
+        monServo.attach(pin);
+        fermer(); // Position fermée par défaut
+    }
+
+    void ouvrir() {
+        monServo.write(90); // Angle pour déverrouiller
+        verrouille = false;
+        cout << "Loquet déverrouillé" << endl;
+    }
+
+    void fermer() {
+        monServo.write(0); // Angle pour verrouiller
+        verrouille = true;
+        cout << "Loquet verrouillé" << endl;
+    }
+
+    bool estVerrouille() { 
+      return verrouille; 
+      }
 };
   class Porte : public Securite {
     private:
         capteur_mouvement *detecteur; // la porte a un capteur
+        Loquet *Lock // la porte a un loquet
         bool etat; // true = ouverte; false = fermée
 
     public:
-      Porte(int pinCapteur) {
+      Porte(int pinCapteur,int pinservo) {
           detecteur = new capteur_mouvement(pinCapteur);
-          
+          lock = new Loquet(pinservo);
+          bool etat;
       }
       ~Porte() { 
         delete detecteur; 
@@ -92,7 +120,17 @@ class capteur_mouvement : public Securite{
           //bool etat = (d > 1); // Si le capteur mesure plus d'un cm, la porte est ouiverte
           return etat;
       }
+
+      void verrouillerLoquet() { 
+          Lock->fermer();
+      }
+      void deverrouillerLoquet() { 
+          monLoquet->ouvrir(); 
+      }
 };
+
+
+
 class Buzzer : public Securite {
   private:
     int PinBuzzer;

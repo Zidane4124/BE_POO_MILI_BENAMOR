@@ -2,15 +2,17 @@
 #include "Securite.h"
 #include "server.h"
 #include <Arduino.h>
+#include <Servo.h>
 
 using namespace std;
 capteur_mouvement capteurMouv(D3); // porte
 capteur_mouvement capteurMouv2(D6); // mouvement
 Buzzer Buzz (D7);
-Porte porte(D3);
+Porte porte(D3, D5);
 blink_led blink_1(D8);
 blink_led blink_2(D4);
 NotificationServeur iPhone("iPhone de Louayi", "Louayi38");
+Servo servomoteur;
 
 
 int etat = 0;
