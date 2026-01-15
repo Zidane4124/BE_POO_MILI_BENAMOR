@@ -1,11 +1,12 @@
 #include <iostream>
-#include "Securite.cpp"
+#include "Securite.h"
+#include "server.h"
 #include <Arduino.h>
 
 using namespace std;
-capteur_mouvement capteurMouv(D3);
-capteur_mouvement capteurMouv2(D6);
-Buzzer Buzz (D5);
+capteur_mouvement capteurMouv(D3); // porte
+capteur_mouvement capteurMouv2(D6); // mouvement
+Buzzer Buzz (D8);
 Porte porte(D3);
 
 
@@ -21,11 +22,17 @@ void setup() {
     Serial.begin(115200);
     Serial.printf("\n Bonjour");
     capteurMouv2.scan();
+    
+    // Initialisation du scan initial pour le mouvement
+    capteurMouv2.scan();
+
+
 }
 
 
 
 void loop(){
+
 
     //delay (1000);
     // Test du capteur de distance
@@ -33,6 +40,7 @@ void loop(){
     // Test Porte
     if ((millis()-last_time2) > 1000){
         if ((porte.estOuverte()==true) || (capteurMouv2.detec_mouvement()==true)){
+
             alarme=true;
             cout << "intrusion"<< endl;
             last_time2 = millis();
