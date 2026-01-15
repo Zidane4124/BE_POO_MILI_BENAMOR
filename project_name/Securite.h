@@ -173,7 +173,7 @@ class NotificationServeur : public Securite {
                     </style>
                 </head>
                 <body>
-                    <h2>🚨 Système de Sécurité</h2>
+                    <h2> Systeme de Securite</h2>
                     <div id="notifs">Historique des alertes...</div>
                     <script>
                         if (!!window.EventSource) {
