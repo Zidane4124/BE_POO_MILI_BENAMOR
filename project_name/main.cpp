@@ -10,6 +10,7 @@ Buzzer Buzz (D7);
 Porte porte(D3);
 blink_led blink_1(D8);
 blink_led blink_2(D4);
+NotificationServeur iPhone("iPhone de Louayi", "Louayi38");
 
 
 int etat = 0;
@@ -23,6 +24,8 @@ bool alarme=false;
 void setup() {
     Serial.begin(115200);
     Serial.printf("\n Bonjour");
+
+    iPhone.initialiser();
     capteurMouv2.scan();
     
     // Initialisation du scan initial pour le mouvement
@@ -46,6 +49,7 @@ void loop(){
             alarme=true;
             cout << "intrusion"<< endl;
             last_time2 = millis();
+            iPhone.envoyer("⚠️ INTRUSION DETECTEE !");
             
         }
         // pour test

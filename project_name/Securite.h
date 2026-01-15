@@ -7,6 +7,10 @@
 #include <Arduino.h>
 #include "Ultrasonic.h"
 
+#include <ESP8266WiFi.h>
+#include <ESPAsyncTCP.h>
+#include <ESPAsyncWebServer.h>
+
 using namespace std;
 
 class Securite {
@@ -130,3 +134,72 @@ class blink_led : public Securite {
 // ------------- Partie notification -------------
 
 
+
+class NotificationServeur : public Securite {
+  private:
+    AsyncWebServer server;
+    AsyncEventSource events;
+    const char* ssid;
+    const char* password;
+
+  public:
+    // Constructeur : on lui passe les identifiants Wi-Fi
+    NotificationServeur(const char* s, const char* p) 
+        : server(80), events("/events"), ssid(s), password(p) {}
+
+    void initialiser() {
+        // 1. Connexion Wi-Fi
+        WiFi.mode(WIFI_STA);
+        WiFi.begin(ssid, password);
+        Serial.print("Connexion au Wi-Fi");
+        while (WiFi.status() != WL_CONNECTED) {
+            delay(500);
+            Serial.print(".");
+        }
+        Serial.println("\nConnecté ! IP : " + WiFi.localIP().toString());
+
+        // 2. Route pour la page HTML
+        server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+            String html = R"rawliteral(
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Alarme INSA - Secu</title>
+                    <meta name="viewport" content="width=device-width, initial-scale=1">
+                    <style>
+                        body { font-family: sans-serif; text-align: center; background: #222; color: white; }
+                        #notifs { margin: 20px; padding: 10px; background: #333; border-radius: 8px; }
+                        .msg { border-bottom: 1px solid #444; padding: 10px; color: #ff4444; font-weight: bold; }
+                    </style>
+                </head>
+                <body>
+                    <h2>🚨 Système de Sécurité</h2>
+                    <div id="notifs">Historique des alertes...</div>
+                    <script>
+                        if (!!window.EventSource) {
+                            var source = new EventSource('/events');
+                            source.addEventListener('message', function(e) {
+                                var node = document.createElement("div");
+                                node.className = "msg";
+                                node.innerHTML = "[" + new Date().toLocaleTimeString() + "] " + e.data;
+                                document.getElementById("notifs").prepend(node);
+                            }, false);
+                        }
+                    </script>
+                </body>
+                </html>
+            )rawliteral";
+            request->send(200, "text/html", html);
+        });
+
+        // 3. Lancer le service de notifications (SSE) et le serveur
+        server.addHandler(&events);
+        server.begin();
+    }
+
+    // La méthode que tu appelleras dans ton code principal
+    void envoyer(String message) {
+        events.send(message.c_str(), "message", millis());
+        Serial.println("SSE envoyé : " + message);
+    }
+};
