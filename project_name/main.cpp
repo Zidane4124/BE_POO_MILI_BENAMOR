@@ -4,6 +4,10 @@
 #include <Arduino.h>
 #include <Servo.h>
 
+#include "operateurs.h"
+#include "exceptions.h"
+
+
 using namespace std;
 capteur_mouvement capteurMouv(D3); // porte
 capteur_mouvement capteurMouv2(D6); // mouvement
@@ -13,13 +17,18 @@ blink_led blink_1(D8);
 blink_led blink_2(D4);
 NotificationServeur iPhone("iPhone de Louayi", "Louayi38");
 Servo servomoteur;
+stopAlarme boutonStop1(D1);
+stopAlarme boutonStop2(D2);
 
 
 int etat = 0;
 unsigned long last_time=0;
 unsigned long last_time2=0;
 unsigned long last_time3=0;
+unsigned long last_error_time = 0;
 bool alarme=false;
+bool alarmeCoupeeManuellement = false; // Variable pour mémoriser si on a coupé l'alarme manuellement
+
 
 
 
@@ -27,43 +36,53 @@ void setup() {
     Serial.begin(115200);
     Serial.printf("\n Bonjour");
 
-    iPhone.initialiser();
+    iPhone.initialiser(porte);
     capteurMouv2.scan();
-    
-    // Initialisation du scan initial pour le mouvement
-    capteurMouv2.scan();
-
-
 }
 
 
 
 void loop(){
 
+    try{
+        //delay (1000);
+        // Test du capteur de distance
+        //cout << "distance :" << capteurMouv.detection_mouvement() << endl;
+        // Test Porte
 
-    //delay (1000);
-    // Test du capteur de distance
-    //cout << "distance :" << capteurMouv.detection_mouvement() << endl;
-    // Test Porte
-    if ((millis()-last_time2) > 1000){
-        if ((porte.estOuverte()==true) || (capteurMouv2.detec_mouvement()==true)){
+        bool arretDemande = boutonStop1.estAppuye() && boutonStop2.estAppuye();
+        if ((millis()-last_time2) > 1000){
+            if ((porte.estOuverte()==true) || (capteurMouv2.detec_mouvement()==true)){
 
-            alarme=true;
-            cout << "intrusion"<< endl;
-            last_time2 = millis();
-            iPhone.envoyer("⚠️ INTRUSION DETECTEE !");
-            
+                if (arretDemande) {
+                    alarme = false;
+                    alarmeCoupeeManuellement = true;
+                    Buzz.eteindre();
+                    blink_1.eteindre();
+                    blink_2.eteindre();
+                    iPhone.envoyer("ALARME ÉTEINTE MANUELLEMENT");
+                }
+                else{
+                    alarme=true;
+                    cout << "intrusion"<< endl;
+                    last_time2 = millis();
+                    iPhone.envoyer("⚠️ INTRUSION DETECTEE !");
+                }
+                
+            }
+            // pour test
+            else{
+                alarme=false;
+                alarmeCoupeeManuellement = false;
+                cout << "pas d'intrusion"<< endl;
+                blink_1.eteindre();
+                blink_2.eteindre();
+                last_time2 = millis();
+                etat = 0;
+            }
         }
-        // pour test
-        else{
-            alarme=false;
-            cout << "pas d'intrusion"<< endl;
-            blink_1.eteindre();
-            blink_2.eteindre();
-            last_time2 = millis();
-            etat = 0;
-        }
-    }
+    
+    
     /*if ((millis()-last_time3) > 1000){
         if (capteurMouv2.detec_mouvement()==true){
             alarme= true;
@@ -72,7 +91,8 @@ void loop(){
         }
     }*/
 
-    if ((alarme==true) && (etat < 20) && ((millis()-last_time) > 500)){
+    if ((alarme==true) && (!alarmeCoupeeManuellement)&& (etat < 20) && ((millis()-last_time) > 500)){
+        cout << porte << endl;
         if ((etat%2)==0){
             //allumer
             Buzz.allumer();
@@ -89,6 +109,17 @@ void loop(){
         }
         etat++;
         last_time = millis();
+    }
+    }
+    catch(const SecuriteException& e){
+        if (millis() - last_error_time > 5000) {
+            cout<<"erreur systeme"<<endl;
+            cout <<e.what()<<endl;
+            iPhone.envoyer("ERREUR : " + String(e.what()));
+            last_error_time = millis();
+        }
+        Buzz.eteindre();
+        alarme = false;
     }
 
 

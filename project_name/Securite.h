@@ -6,10 +6,13 @@
 #include <algorithm> 
 #include <Arduino.h>
 #include "Ultrasonic.h"
+#include <Servo.h>
 
 #include <ESP8266WiFi.h>
 #include <ESPAsyncTCP.h>
 #include <ESPAsyncWebServer.h>
+#include <numeric>
+#include "exceptions.h"
 
 using namespace std;
 
@@ -24,7 +27,9 @@ class capteur_mouvement : public Securite{
     int Pin;
     Ultrasonic *ultrasonic;
     int distance_mouvement;
-    int historique[32];
+    std::vector<int> historique;
+    const size_t MAX_SAMPLES = 10;
+    //int historique[32];
   public:
     capteur_mouvement(int p){
       Pin=p;
@@ -51,10 +56,12 @@ class capteur_mouvement : public Securite{
       // true si un mouvement est détecté
       // false si pas de mouvement
       int distance_secur = ultrasonic->MeasureInCentimeters();
+      if (distance_secur <= 0) {
+        throw SecuriteException("Erreur Materielle : Capteur ultrason HS ou debranche");
+      }
+      cout << "distance securite :" << distance_secur <<endl << "distance_secur+0.1*distance_secur :" << distance_secur+0.5*distance_secur <<endl<< "distance_mouvement :" << distance_mouvement << endl;
 
-      cout << "distance securite :" << distance_secur <<endl << "distance_secur+0.1*distance_secur :" << distance_secur+0.1*distance_secur <<endl<< "distance_mouvement :" << distance_mouvement << endl;
-
-      if (((distance_secur+0.3*distance_secur) < distance_mouvement)){
+      if (((distance_secur+0.5*distance_secur) < distance_mouvement)){
         
         cout << "mouvement detecté"<< endl;
         return true;
@@ -62,6 +69,19 @@ class capteur_mouvement : public Securite{
       else{
         return false;
       }
+    }
+    int mesure_distance_filtree() { // on a fait cette fonction pour utiliser la STL
+        int d = ultrasonic->MeasureInCentimeters();
+
+        historique.push_back(d);
+
+        if (historique.size() > MAX_SAMPLES) {
+            historique.erase(historique.begin());
+        }
+
+        if (historique.empty()) return 0;
+        int somme = std::accumulate(historique.begin(), historique.end(), 0);
+        return somme / historique.size();
     }
 };
 class Loquet : public Securite {
@@ -95,17 +115,18 @@ class Loquet : public Securite {
   class Porte : public Securite {
     private:
         capteur_mouvement *detecteur; // la porte a un capteur
-        Loquet *Lock // la porte a un loquet
+        Loquet *Lock; // la porte a un loquet
         bool etat; // true = ouverte; false = fermée
 
     public:
       Porte(int pinCapteur,int pinservo) {
           detecteur = new capteur_mouvement(pinCapteur);
-          lock = new Loquet(pinservo);
+          Lock = new Loquet(pinservo);
           bool etat;
       }
       ~Porte() { 
         delete detecteur; 
+        delete Lock;
       }
       bool estOuverte() {
           int d = detecteur->mesure_distance();
@@ -121,11 +142,17 @@ class Loquet : public Securite {
           return etat;
       }
 
-      void verrouillerLoquet() { 
+      void verrouiller() { 
+          if (this->estOuverte()) {
+            throw SecuriteException("Securite : Impossible de verrouiller car la porte est ouverte");
+          }
           Lock->fermer();
       }
-      void deverrouillerLoquet() { 
-          monLoquet->ouvrir(); 
+      void deverrouiller() { 
+          Lock->ouvrir(); 
+      }
+      bool estVerrouillee() { 
+        return Lock->estVerrouille(); 
       }
 };
 
@@ -167,7 +194,24 @@ class blink_led : public Securite {
   }
 
 };
+class stopAlarme : public Securite {
+  private:
+  int _pin;
+  
+  public:
+  stopAlarme(int pin){
+    _pin = pin;
+    pinMode(_pin, INPUT_PULLUP);
+  }
 
+    // Renvoie VRAI seulement si les DEUX boutons sont appuyés
+    bool estAppuye(){
+      if (digitalRead(_pin) == HIGH){
+        return true; 
+      }
+      return false;
+    }
+};
 
 // ------------- Partie notification -------------
 
@@ -181,22 +225,26 @@ class NotificationServeur : public Securite {
     const char* password;
 
   public:
-    // Constructeur : on lui passe les identifiants Wi-Fi
     NotificationServeur(const char* s, const char* p) 
         : server(80), events("/events"), ssid(s), password(p) {}
 
-    void initialiser() {
-        // 1. Connexion Wi-Fi
+    void initialiser(Porte &laPorte) { 
         WiFi.mode(WIFI_STA);
         WiFi.begin(ssid, password);
         Serial.print("Connexion au Wi-Fi");
-        while (WiFi.status() != WL_CONNECTED) {
-            delay(500);
-            Serial.print(".");
-        }
+        while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
         Serial.println("\nConnecté ! IP : " + WiFi.localIP().toString());
 
-        // 2. Route pour la page HTML
+        server.on("/toggleLock", HTTP_GET, [&laPorte](AsyncWebServerRequest *request){
+            if(laPorte.estVerrouillee()) {
+                laPorte.deverrouiller();
+                request->send(200, "text/plain", "OUVERT");
+            } else {
+                laPorte.verrouiller();
+                request->send(200, "text/plain", "FERME");
+            }
+        });
+
         server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
             String html = R"rawliteral(
                 <!DOCTYPE html>
@@ -206,19 +254,27 @@ class NotificationServeur : public Securite {
                     <meta name="viewport" content="width=device-width, initial-scale=1">
                     <style>
                         body { font-family: sans-serif; text-align: center; background: #222; color: white; }
-                        #notifs { margin: 20px; padding: 10px; background: #333; border-radius: 8px; }
-                        .msg { border-bottom: 1px solid #444; padding: 10px; color: #ff4444; font-weight: bold; }
+                        .btn { padding: 20px; margin: 10px; font-size: 18px; border-radius: 10px; border: none; cursor: pointer; width: 80%; }
+                        #lockBtn { background: #f39c12; color: white; font-weight: bold; }
+                        #notifs { margin: 20px; padding: 10px; background: #333; border-radius: 8px; font-size: 0.9em; }
                     </style>
                 </head>
                 <body>
-                    <h2> Systeme de Securite</h2>
-                    <div id="notifs">Historique des alertes...</div>
+                    <h2>Systeme de Securite</h2>
+                    <button id="lockBtn" class="btn" onclick="toggleLock()">CHANGER ETAT LOQUET</button>
+                    <div id="notifs">Historique...</div>
                     <script>
+                        function toggleLock() {
+                            fetch('/toggleLock').then(response => response.text()).then(status => {
+                                let btn = document.getElementById('lockBtn');
+                                btn.innerHTML = (status == "OUVERT") ? "DEVERROUILLE" : "VERROUILLE";
+                            });
+                        }
                         if (!!window.EventSource) {
                             var source = new EventSource('/events');
                             source.addEventListener('message', function(e) {
                                 var node = document.createElement("div");
-                                node.className = "msg";
+                                node.style.color = "#ff4444";
                                 node.innerHTML = "[" + new Date().toLocaleTimeString() + "] " + e.data;
                                 document.getElementById("notifs").prepend(node);
                             }, false);
@@ -230,14 +286,11 @@ class NotificationServeur : public Securite {
             request->send(200, "text/html", html);
         });
 
-        // 3. Lancer le service de notifications (SSE) et le serveur
         server.addHandler(&events);
         server.begin();
     }
 
-    // La méthode que tu appelleras dans ton code principal
     void envoyer(String message) {
         events.send(message.c_str(), "message", millis());
-        Serial.println("SSE envoyé : " + message);
     }
 };
