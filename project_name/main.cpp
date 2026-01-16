@@ -3,10 +3,8 @@
 #include "server.h"
 #include <Arduino.h>
 #include <Servo.h>
-
 #include "operateurs.h"
 #include "exceptions.h"
-
 
 using namespace std;
 capteur_mouvement capteurMouv(D3); // porte
@@ -20,7 +18,6 @@ Servo servomoteur;
 stopAlarme boutonStop1(D1);
 stopAlarme boutonStop2(D2);
 
-
 int etat = 0;
 unsigned long last_time=0;
 unsigned long last_time2=0;
@@ -29,27 +26,14 @@ unsigned long last_error_time = 0;
 bool alarme=false;
 bool alarmeCoupeeManuellement = false; // Variable pour mémoriser si on a coupé l'alarme manuellement
 
-
-
-
 void setup() {
     Serial.begin(115200);
     Serial.printf("\n Bonjour");
-
     iPhone.initialiser(porte);
     capteurMouv2.scan();
 }
-
-
-
 void loop(){
-
     try{
-        //delay (1000);
-        // Test du capteur de distance
-        //cout << "distance :" << capteurMouv.detection_mouvement() << endl;
-        // Test Porte
-
         bool arretDemande = boutonStop1.estAppuye() && boutonStop2.estAppuye();
         if ((millis()-last_time2) > 1000){
             if ((porte.estOuverte()==true) || (capteurMouv2.detec_mouvement()==true)){
@@ -67,10 +51,8 @@ void loop(){
                     cout << "intrusion"<< endl;
                     last_time2 = millis();
                     iPhone.envoyer("⚠️ INTRUSION DETECTEE !");
-                }
-                
+                }              
             }
-            // pour test
             else{
                 alarme=false;
                 alarmeCoupeeManuellement = false;
@@ -81,8 +63,6 @@ void loop(){
                 etat = 0;
             }
         }
-    
-    
     /*if ((millis()-last_time3) > 1000){
         if (capteurMouv2.detec_mouvement()==true){
             alarme= true;
@@ -90,7 +70,6 @@ void loop(){
             last_time3 = millis();
         }
     }*/
-
     if ((alarme==true) && (!alarmeCoupeeManuellement)&& (etat < 20) && ((millis()-last_time) > 500)){
         cout << porte << endl;
         if ((etat%2)==0){
@@ -121,8 +100,4 @@ void loop(){
         Buzz.eteindre();
         alarme = false;
     }
-
-
-    
-
 }
